@@ -1,4 +1,5 @@
 name: Android preview APK
+run-name: ${{ github.event.head_commit.message || format('Android preview - {0}', inputs.mode) }}
 
 on:
   workflow_dispatch:
@@ -18,15 +19,31 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: android-preview-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
+  request:
+    if: github.repository == 'HassanImtiaz09/FytNova'
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.request.outputs.mode }}
+      build_id: ${{ steps.request.outputs.build_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Select request
+        id: request
+        env:
+          REQUEST_MODE: ${{ inputs.mode }}
+          REQUEST_BUILD_ID: ${{ inputs.build_id }}
+        run: node scripts/expo-android-preview.mjs request
   build:
+    needs: request
     if: github.repository == 'HassanImtiaz09/FytNova'
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    concurrency:
+      group: android-preview-${{ github.ref }}-${{ needs.request.outputs.mode }}
+      cancel-in-progress: false
     env:
       CI: '1'
       EXPO_NO_TELEMETRY: '1'
@@ -52,26 +69,20 @@ jobs:
             echo '::error::Add EXPO_TOKEN in this repository Settings → Secrets and variables → Actions.'
             exit 1
           fi
-      - name: Select request
-        id: request
-        env:
-          REQUEST_MODE: ${{ inputs.mode }}
-          REQUEST_BUILD_ID: ${{ inputs.build_id }}
-        run: node scripts/expo-android-preview.mjs request
       - name: Link Expo project
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: node scripts/expo-android-preview.mjs link
       - name: Start Android APK build
-        if: steps.request.outputs.mode == 'build'
+        if: needs.request.outputs.mode == 'build'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: node scripts/expo-android-preview.mjs build
       - name: Inspect Android build
-        if: steps.request.outputs.mode == 'inspect'
+        if: needs.request.outputs.mode == 'inspect'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          PREVIEW_BUILD_ID: ${{ steps.request.outputs.build_id }}
+          PREVIEW_BUILD_ID: ${{ needs.request.outputs.build_id }}
         run: node scripts/expo-android-preview.mjs inspect
       - name: Save Expo project and build link
         uses: actions/upload-artifact@v4
@@ -80,7 +91,7 @@ jobs:
           path: preview-result.json
           retention-days: 7
       - name: Wait for Android build
-        if: steps.request.outputs.mode == 'build'
+        if: needs.request.outputs.mode == 'build'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: node scripts/expo-android-preview.mjs wait

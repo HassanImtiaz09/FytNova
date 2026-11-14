@@ -1,5 +1,6 @@
 {
-  "attempt": 3,
-  "mode": "build",
-  "purpose": "Rebuild Android preview with the TrackPlayer React Native Bundle nullability fix"
+  "attempt": 4,
+  "mode": "inspect",
+  "buildId": "9fe32c45-ab18-4c70-a975-104e82e64e94",
+  "purpose": "Read progress of the existing patched build without starting another build"
 }

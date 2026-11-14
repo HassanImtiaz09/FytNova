@@ -99,7 +99,7 @@ if (mode === "request") {
 } else if (mode === "inspect") {
   const build = runJson("eas", ["build:view", process.env.PREVIEW_BUILD_ID, "--json"]);
   saveResult(build);
-  if (build.status === "ERRORED") await captureDiagnostics(build);
+  await captureDiagnostics(build);
 } else if (mode === "wait") {
   const { buildId } = JSON.parse(readFileSync(resultPath, "utf8"));
   if (!buildId) throw new Error("No Android build ID to monitor");
