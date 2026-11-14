@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
+import appConfig from "../app.config";
 
 const APP_DIR = path.join(__dirname, "..");
 const healthServiceSrc = fs.readFileSync(path.join(APP_DIR, "lib/health-service.ts"), "utf-8");
@@ -438,8 +439,14 @@ describe("Round 56: App Config — Health Connect Configuration", () => {
     expect(appConfigSrc).toContain("minSdkVersion: 26");
   });
 
-  it("sets compile and target SDK to 34", () => {
-    expect(appConfigSrc).toContain("compileSdkVersion: 34");
-    expect(appConfigSrc).toContain("targetSdkVersion: 34");
+  it("inherits compile and target SDK versions from Expo while keeping Health Connect's minimum", () => {
+    const plugin = appConfig.plugins?.find(
+      entry => Array.isArray(entry) && entry[0] === "expo-build-properties",
+    );
+    expect(plugin).toBeDefined();
+    const android = (plugin as [string, { android: Record<string, unknown> }])[1].android;
+    expect(android.minSdkVersion).toBe(26);
+    expect(android).not.toHaveProperty("compileSdkVersion");
+    expect(android).not.toHaveProperty("targetSdkVersion");
   });
 });

@@ -114,29 +114,10 @@ const config: ExpoConfig = {
     "expo-background-task",
     "react-native-health",
     "expo-health-connect",
-    [
-      "react-native-vision-camera",
-      {
-        cameraPermissionText: "FytNova needs camera access for exercise form checking and body scan analysis.",
-        enableMicrophonePermission: false,
-        enableFrameProcessors: true,
-        enableCodeScanner: false,
-      },
-    ],
-    [
-      "react-native-track-player",
-      {
-        capabilities: [
-          "play",
-          "pause",
-          "stop",
-          "skipToNext",
-          "skipToPrevious",
-          "seekTo",
-        ],
-        compactCapabilities: ["play", "pause", "skipToNext"],
-      },
-    ],
+    // VisionCamera 5 and TrackPlayer 4 use native autolinking and do not
+    // export Expo config plugins. Camera permissions are declared above;
+    // playback capabilities are configured in services/track-player-service.ts.
+    "expo-dev-client",
     [
       "expo-camera",
       {
@@ -182,8 +163,7 @@ const config: ExpoConfig = {
         android: {
           buildArchs: ["armeabi-v7a", "arm64-v8a"],
           minSdkVersion: 26,
-          compileSdkVersion: 34,
-          targetSdkVersion: 34,
+          // Use the compile/target SDK defaults supplied by Expo SDK 54.
         },
       },
     ],
