@@ -55,6 +55,8 @@ async function captureDiagnostics(build) {
           for (let j = Math.max(0, i - 3); j <= Math.min(lines.length - 1, i + 5); j++) selected.add(j);
         }
       });
+      // Include current progress even when earlier warnings contain "error".
+      for (let i = Math.max(0, lines.length - 60); i < lines.length; i++) selected.add(i);
       const excerpt = selected.size
         ? [...selected].sort((a, b) => a - b).slice(-300).map(i => lines[i]).join("\n")
         : lines.slice(-50).join("\n");
