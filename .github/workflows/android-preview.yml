@@ -2,6 +2,15 @@ name: Android preview APK
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [build, inspect]
+        default: build
+        description: Build a new APK or inspect an existing build
+      build_id:
+        type: string
+        description: Expo build ID when inspecting
   push:
     branches: [codex/preview-setup]
     paths: [.github/android-preview-request.json]
@@ -43,14 +52,27 @@ jobs:
             echo '::error::Add EXPO_TOKEN in this repository Settings → Secrets and variables → Actions.'
             exit 1
           fi
+      - name: Select request
+        id: request
+        env:
+          REQUEST_MODE: ${{ inputs.mode }}
+          REQUEST_BUILD_ID: ${{ inputs.build_id }}
+        run: node scripts/expo-android-preview.mjs request
       - name: Link Expo project
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: node scripts/expo-android-preview.mjs link
       - name: Start Android APK build
+        if: steps.request.outputs.mode == 'build'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: node scripts/expo-android-preview.mjs build
+      - name: Inspect Android build
+        if: steps.request.outputs.mode == 'inspect'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          PREVIEW_BUILD_ID: ${{ steps.request.outputs.build_id }}
+        run: node scripts/expo-android-preview.mjs inspect
       - name: Save Expo project and build link
         uses: actions/upload-artifact@v4
         with:
@@ -58,6 +80,7 @@ jobs:
           path: preview-result.json
           retention-days: 7
       - name: Wait for Android build
+        if: steps.request.outputs.mode == 'build'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: node scripts/expo-android-preview.mjs wait
@@ -66,6 +89,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: expo-android-result
-          path: preview-result.json
+          path: |
+            preview-result.json
+            preview-diagnostics.txt
           if-no-files-found: ignore
           retention-days: 7

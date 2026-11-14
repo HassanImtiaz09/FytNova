@@ -28,14 +28,55 @@ function saveResult(build) {
     buildUrl,
     apkUrl: build.artifacts?.buildUrl ?? null,
     error: build.error?.message ?? null,
+    queuePosition: build.queuePosition ?? null,
+    estimatedWaitTimeLeftSeconds: build.estimatedWaitTimeLeftSeconds ?? null,
   };
   writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`);
   console.log(`Android preview: ${result.status} — ${buildUrl}`);
   return result;
 }
 
+async function captureDiagnostics(build) {
+  const reports = [];
+  for (const [index, url] of (build.logFiles ?? []).entries()) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const raw = await response.text();
+      const lines = raw.split(/\r?\n/).map(line => {
+        try {
+          const entry = JSON.parse(line);
+          return String(entry.msg ?? entry.message ?? line);
+        } catch { return line; }
+      });
+      const selected = new Set();
+      lines.forEach((line, i) => {
+        if (/\berror\b|^e: |^FAILURE|What went wrong|Execution failed|Caused by:|Could not resolve|CMake Error|ninja: error/i.test(line)) {
+          for (let j = Math.max(0, i - 3); j <= Math.min(lines.length - 1, i + 5); j++) selected.add(j);
+        }
+      });
+      const excerpt = selected.size
+        ? [...selected].sort((a, b) => a - b).slice(-300).map(i => lines[i]).join("\n")
+        : lines.slice(-50).join("\n");
+      const redacted = excerpt.replace(/https?:\/\/\S+/g, "[URL]")
+        .replaceAll(process.env.EXPO_TOKEN || "__NO_EXPO_TOKEN__", "[REDACTED]");
+      reports.push(`Log ${index + 1}\n${redacted}`);
+    } catch (error) {
+      reports.push(`Log ${index + 1}: could not retrieve diagnostics (${error.message})`);
+    }
+  }
+  writeFileSync("preview-diagnostics.txt", reports.join("\n\n"));
+}
+
 const mode = process.argv[2];
-if (mode === "link") {
+if (mode === "request") {
+  const request = JSON.parse(readFileSync(".github/android-preview-request.json", "utf8"));
+  const selectedMode = process.env.REQUEST_MODE || request.mode || "build";
+  const buildId = process.env.REQUEST_MODE ? process.env.REQUEST_BUILD_ID : request.buildId;
+  if (!["build", "inspect"].includes(selectedMode)) throw new Error("Invalid preview request mode");
+  if (selectedMode === "inspect" && !/^[a-f0-9-]{36}$/i.test(buildId ?? "")) throw new Error("A valid Expo build ID is required");
+  appendFileSync(process.env.GITHUB_OUTPUT, `mode=${selectedMode}\nbuild_id=${buildId ?? ""}\n`);
+} else if (mode === "link") {
   // EAS cannot edit app.config.ts automatically. Materialize its evaluated public
   // config only inside this disposable CI checkout, then let EAS write projectId.
   const config = runJson("expo", ["config", "--type", "public", "--json"]);
@@ -55,6 +96,10 @@ if (mode === "link") {
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Android build: [Open in Expo](${result.buildUrl})\n\n`);
   }
+} else if (mode === "inspect") {
+  const build = runJson("eas", ["build:view", process.env.PREVIEW_BUILD_ID, "--json"]);
+  saveResult(build);
+  if (build.status === "ERRORED") await captureDiagnostics(build);
 } else if (mode === "wait") {
   const { buildId } = JSON.parse(readFileSync(resultPath, "utf8"));
   if (!buildId) throw new Error("No Android build ID to monitor");
@@ -70,11 +115,12 @@ if (mode === "link") {
       process.exit(0);
     }
     if (["ERRORED", "CANCELED"].includes(result.status)) {
+      if (result.status === "ERRORED") await captureDiagnostics(build);
       throw new Error(result.error ?? `Android build ${result.status.toLowerCase()}`);
     }
     await new Promise(resolve => setTimeout(resolve, 30000));
   }
   throw new Error("Build is still pending; use the saved Expo link to check its status");
 } else {
-  throw new Error("Expected link, build or wait");
+  throw new Error("Expected request, link, build, inspect or wait");
 }
