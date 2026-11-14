@@ -27,6 +27,11 @@ releases need their own signing configuration. This APK opens without Metro.
 Online auth, AI and synced data still require a configured, reachable backend.
 Native modules still need validation on a physical Android device.
 
+TrackPlayer 4.1.2 includes a pnpm patch for React Native 0.81's non-null Bundle
+conversion API. The two track getters now resolve null when their original
+Bundle is missing. The patch is applied by the locked pnpm installation; do not
+replace it with manual edits to node_modules.
+
 ## Browser preview
 
 Use Node 22 LTS and the package manager declared in package.json (pnpm 9.12.0).

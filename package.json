@@ -134,5 +134,10 @@
     "typescript": "~5.9.3",
     "vitest": "^2.1.9"
   },
-  "packageManager": "pnpm@9.12.0"
+  "packageManager": "pnpm@9.12.0",
+  "pnpm": {
+    "patchedDependencies": {
+      "react-native-track-player@4.1.2": "patches/react-native-track-player@4.1.2.patch"
+    }
+  }
 }
