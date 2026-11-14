@@ -4,6 +4,29 @@ The app uses Expo SDK 54. Use a browser to review screens, then an Android
 development build to test native modules. The native build still needs validation
 on a physical device; browser success does not establish camera/health support.
 
+## Android APK through GitHub Actions
+
+The **Android preview APK** workflow uses the repository Actions secret
+`EXPO_TOKEN` to create/link the Expo project and build an installable APK with
+embedded JavaScript. The token is only passed to the Expo steps. It is never
+included in the mobile app or published artifacts.
+
+On `codex/preview-setup`, changing `.github/android-preview-request.json` starts
+one build request. Ordinary source commits do not trigger additional builds.
+After the workflow is on the default branch, it can also be started manually
+from the repository's Actions page.
+
+The workflow summary provides the Expo build link and, on success, the APK
+installation link. The `expo-android-build` and `expo-android-result` artifacts
+contain only project/build metadata and the resulting APK URL. Cloud build logs
+remain in Expo. The workflow never submits to an app store.
+
+The `android-preview` profile builds a release-mode APK using the generated
+Android template's debug signing key. It is for internal UI testing only; store
+releases need their own signing configuration. This APK opens without Metro.
+Online auth, AI and synced data still require a configured, reachable backend.
+Native modules still need validation on a physical Android device.
+
 ## Browser preview
 
 Use Node 22 LTS and the package manager declared in package.json (pnpm 9.12.0).

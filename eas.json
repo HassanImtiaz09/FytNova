@@ -4,6 +4,20 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "android-preview": {
+      "distribution": "internal",
+      "developmentClient": false,
+      "withoutCredentials": true,
+      "node": "22.16.0",
+      "pnpm": "9.12.0",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "preview"
+      }
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",
