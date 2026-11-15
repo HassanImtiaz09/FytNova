@@ -37,6 +37,14 @@ unauthenticated user endpoint returns no user. These checks establish
 connectivity, not successful sign-in, AI provider access or database writes.
 Native modules still need validation on a physical Android device.
 
+For the first connected-device check, open **Profile → Sign In to Sync Your
+Data → Continue with Google**. Confirm that the browser returns to FytNova.
+If an **Import Your Data?** prompt appears, choose **Start Fresh** for now;
+that button dismisses the prompt without deleting local guest records. The
+existing import handler reports success without persisting data, while the
+client then deletes its local copies. Do not use **Import My Data** until
+server persistence and migration verification are implemented.
+
 TrackPlayer 4.1.2 includes a pnpm patch for React Native 0.81's non-null Bundle
 conversion API. The two track getters now resolve null when their original
 Bundle is missing. The patch is applied by the locked pnpm installation; do not
@@ -115,7 +123,8 @@ reachable backend for online functionality.
 
 This setup repair removes invalid VisionCamera 5/TrackPlayer 4 Expo plugin entries,
 adds the development client and required dependencies, and aligns Expo packages
-with SDK 54. It does not establish that pose detection or native health features
-are complete. EAS compilation and physical-device camera, video, audio and health
-permission checks are the next native gates. No database migration is needed for
-this preview setup.
+with SDK 54. The first APK compiled successfully and opens to Home on the user's
+Android device. This does not establish that pose detection or native health
+features are complete. Connected sign-in, AI, camera, video, audio and health
+permission flows still need physical-device checks. No database migration is
+needed for this preview setup.
