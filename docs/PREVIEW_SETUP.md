@@ -24,7 +24,17 @@ remain in Expo. The workflow never submits to an app store.
 The `android-preview` profile builds a release-mode APK using the generated
 Android template's debug signing key. It is for internal UI testing only; store
 releases need their own signing configuration. This APK opens without Metro.
-Online auth, AI and synced data still require a configured, reachable backend.
+The `android-preview` profile now includes the public API and OAuth settings
+from the existing Manus preview. Its API is a development sandbox, not a
+permanent deployment: keep that Manus sandbox running while testing. If it
+stops or its address changes, online features will be unavailable. Replace
+`EXPO_PUBLIC_API_BASE_URL` in that profile with a stable deployment URL and
+rebuild when one is available. Backend credentials remain on the backend;
+only public connection settings are embedded in the APK.
+
+The sandbox's REST and tRPC health endpoints respond successfully, and its
+unauthenticated user endpoint returns no user. These checks establish
+connectivity, not successful sign-in, AI provider access or database writes.
 Native modules still need validation on a physical Android device.
 
 TrackPlayer 4.1.2 includes a pnpm patch for React Native 0.81's non-null Bundle

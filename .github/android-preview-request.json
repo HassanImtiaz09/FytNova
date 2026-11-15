@@ -1,6 +1,5 @@
 {
-  "attempt": 5,
-  "mode": "inspect",
-  "buildId": "9fe32c45-ab18-4c70-a975-104e82e64e94",
-  "purpose": "Read progress of the existing patched build without starting another build"
+  "attempt": 6,
+  "mode": "build",
+  "purpose": "Build an Android test APK connected to the existing Manus backend with the registered OAuth callback scheme"
 }
