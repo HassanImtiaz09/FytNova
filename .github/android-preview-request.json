@@ -1,6 +1,6 @@
 {
-  "attempt": 9,
+  "attempt": 10,
   "mode": "inspect",
   "buildId": "6639af2d-dd11-4349-923f-dafbc8494dc1",
-  "purpose": "Check the existing Android build after native compilation has progressed"
+  "purpose": "Inspect the existing backend APK for native build errors and current progress"
 }
