@@ -1,5 +1,6 @@
 {
-  "attempt": 6,
-  "mode": "build",
-  "purpose": "Build an Android test APK connected to the existing Manus backend with the registered OAuth callback scheme"
+  "attempt": 7,
+  "mode": "inspect",
+  "buildId": "6639af2d-dd11-4349-923f-dafbc8494dc1",
+  "purpose": "Inspect the existing backend-connected Android build without starting another build"
 }
