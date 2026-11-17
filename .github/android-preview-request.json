@@ -1,6 +1,6 @@
 {
-  "attempt": 14,
+  "attempt": 15,
   "mode": "inspect",
-  "purpose": "Read queue or native compilation status of the existing OAuth callback fix build",
+  "purpose": "Check whether the existing OAuth fix build has left the Expo queue",
   "buildId": "dbbce5b7-f235-4a75-96cb-09388ede3de2"
 }
