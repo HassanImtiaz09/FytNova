@@ -1,11 +1,14 @@
 import * as Linking from "expo-linking";
+import Constants from "expo-constants";
 import * as ReactNative from "react-native";
 
-// Extract scheme from bundle ID (last segment timestamp, prefixed with "manus")
-// e.g., "space.manus.my.app.t20240115103045" -> "manus20240115103045"
-const bundleId = "space.manus.peakpulse.mobile.t20260312102054";
-const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
-const schemeFromBundleId = `manus${timestamp}`;
+// Use a registered callback that Manus accepts. The branded fytnova scheme
+// remains available for app links, but Manus rejects it for OAuth redirects.
+const configuredScheme = Constants.expoConfig?.scheme;
+const configuredSchemes = Array.isArray(configuredScheme)
+  ? configuredScheme
+  : configuredScheme ? [configuredScheme] : [];
+const deepLinkScheme = configuredSchemes.find((scheme) => scheme.startsWith("manus"));
 
 const env = {
   portal: process.env.EXPO_PUBLIC_OAUTH_PORTAL_URL ?? "",
@@ -14,7 +17,7 @@ const env = {
   ownerId: process.env.EXPO_PUBLIC_OWNER_OPEN_ID ?? "",
   ownerName: process.env.EXPO_PUBLIC_OWNER_NAME ?? "",
   apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? "",
-  deepLinkScheme: schemeFromBundleId,
+  deepLinkScheme,
 };
 
 export const OAUTH_PORTAL_URL = env.portal;
@@ -38,6 +41,10 @@ export function getApiBaseUrl(): string {
   // On web, derive from current hostname by replacing port 8081 with 3000
   if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
     const { protocol, hostname } = window.location;
+    // Standalone Expo web runs separately from the Express API.
+    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") {
+      return `${protocol}//${hostname}:3000`;
+    }
     // Pattern: 8081-sandboxid.region.domain -> 3000-sandboxid.region.domain
     const apiHostname = hostname.replace(/^8081-/, "3000-");
     if (apiHostname !== hostname) {
@@ -72,6 +79,9 @@ export const getRedirectUri = () => {
   if (ReactNative.Platform.OS === "web") {
     return `${getApiBaseUrl()}/api/oauth/callback`;
   } else {
+    if (!env.deepLinkScheme) {
+      throw new Error("Please update FytNova before signing in.");
+    }
     return Linking.createURL("/oauth/callback", {
       scheme: env.deepLinkScheme,
     });

@@ -21,10 +21,10 @@ const bundleId =
       return /^[a-zA-Z]/.test(segment) ? segment : "x" + segment;
     })
     .join(".") || "space.manus.app";
-// Deep link scheme
-
-const schemeFromBundleId = "fytnova";
-
+// Manus OAuth only accepts http, https or manus* callback schemes. Register
+// the project's original Manus scheme alongside the branded app links.
+const appScheme = "fytnova";
+const oauthScheme = "manus20260312102054";
 
 const env = {
   // App branding - update these values directly (do not use env vars)
@@ -32,7 +32,7 @@ const env = {
   appSlug: "peakpulse-mobile",
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663430072618/TCxddYfhYS3he4wae2YPUE/fytnova-logo-3-KVA7CDeCPkvHBPhUSFyQzi.png",
-  scheme: schemeFromBundleId,
+  scheme: [appScheme, oauthScheme],
   iosBundleId: bundleId,
   androidPackage: bundleId,
 };
@@ -40,6 +40,12 @@ const env = {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
+  owner: "hassanimtiaz09",
+  extra: {
+    eas: {
+      projectId: "0c09c8fb-93ec-40f4-91d5-a34d4c8e8d0b",
+    },
+  },
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
@@ -93,13 +99,7 @@ const config: ExpoConfig = {
     intentFilters: [
       {
         action: "VIEW",
-        autoVerify: true,
-        data: [
-          {
-            scheme: env.scheme,
-            host: "*",
-          },
-        ],
+        data: env.scheme.map((scheme) => ({ scheme })),
         category: ["BROWSABLE", "DEFAULT"],
       },
     ],
@@ -114,29 +114,10 @@ const config: ExpoConfig = {
     "expo-background-task",
     "react-native-health",
     "expo-health-connect",
-    [
-      "react-native-vision-camera",
-      {
-        cameraPermissionText: "FytNova needs camera access for exercise form checking and body scan analysis.",
-        enableMicrophonePermission: false,
-        enableFrameProcessors: true,
-        enableCodeScanner: false,
-      },
-    ],
-    [
-      "react-native-track-player",
-      {
-        capabilities: [
-          "play",
-          "pause",
-          "stop",
-          "skipToNext",
-          "skipToPrevious",
-          "seekTo",
-        ],
-        compactCapabilities: ["play", "pause", "skipToNext"],
-      },
-    ],
+    // VisionCamera 5 and TrackPlayer 4 use native autolinking and do not
+    // export Expo config plugins. Camera permissions are declared above;
+    // playback capabilities are configured in services/track-player-service.ts.
+    "expo-dev-client",
     [
       "expo-camera",
       {
@@ -182,8 +163,7 @@ const config: ExpoConfig = {
         android: {
           buildArchs: ["armeabi-v7a", "arm64-v8a"],
           minSdkVersion: 26,
-          compileSdkVersion: 34,
-          targetSdkVersion: 34,
+          // Use the compile/target SDK defaults supplied by Expo SDK 54.
         },
       },
     ],

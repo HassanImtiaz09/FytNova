@@ -1,0 +1,107 @@
+name: Android preview APK
+run-name: ${{ github.event.head_commit.message || format('Android preview - {0}', inputs.mode) }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [build, inspect]
+        default: build
+        description: Build a new APK or inspect an existing build
+      build_id:
+        type: string
+        description: Expo build ID when inspecting
+  push:
+    branches: [codex/preview-setup]
+    paths: [.github/android-preview-request.json]
+
+permissions:
+  contents: read
+
+jobs:
+  request:
+    if: github.repository == 'HassanImtiaz09/FytNova'
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.request.outputs.mode }}
+      build_id: ${{ steps.request.outputs.build_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Select request
+        id: request
+        env:
+          REQUEST_MODE: ${{ inputs.mode }}
+          REQUEST_BUILD_ID: ${{ inputs.build_id }}
+        run: node scripts/expo-android-preview.mjs request
+  build:
+    needs: request
+    if: github.repository == 'HassanImtiaz09/FytNova'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    concurrency:
+      group: android-preview-${{ github.ref }}-${{ needs.request.outputs.mode }}
+      cancel-in-progress: false
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      EAS_NO_VCS: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify Expo token is configured
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo '::error::Add EXPO_TOKEN in this repository Settings → Secrets and variables → Actions.'
+            exit 1
+          fi
+      - name: Link Expo project
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: node scripts/expo-android-preview.mjs link
+      - name: Start Android APK build
+        if: needs.request.outputs.mode == 'build'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: node scripts/expo-android-preview.mjs build
+      - name: Inspect Android build
+        if: needs.request.outputs.mode == 'inspect'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          PREVIEW_BUILD_ID: ${{ needs.request.outputs.build_id }}
+        run: node scripts/expo-android-preview.mjs inspect
+      - name: Save Expo project and build link
+        uses: actions/upload-artifact@v4
+        with:
+          name: expo-android-build
+          path: preview-result.json
+          retention-days: 7
+      - name: Wait for Android build
+        if: needs.request.outputs.mode == 'build'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: node scripts/expo-android-preview.mjs wait
+      - name: Save Android build result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: expo-android-result
+          path: |
+            preview-result.json
+            preview-diagnostics.txt
+          if-no-files-found: ignore
+          retention-days: 7
