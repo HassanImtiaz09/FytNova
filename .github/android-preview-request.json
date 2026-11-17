@@ -1,6 +1,6 @@
 {
-  "attempt": 15,
+  "attempt": 16,
   "mode": "inspect",
-  "purpose": "Check whether the existing OAuth fix build has left the Expo queue",
+  "purpose": "Inspect the existing OAuth fix APK after the extended Expo queue delay",
   "buildId": "dbbce5b7-f235-4a75-96cb-09388ede3de2"
 }
