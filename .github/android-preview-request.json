@@ -1,6 +1,5 @@
 {
-  "attempt": 11,
-  "mode": "inspect",
-  "buildId": "6639af2d-dd11-4349-923f-dafbc8494dc1",
-  "purpose": "Read the existing connected APK build status near the prior build duration"
+  "attempt": 12,
+  "mode": "build",
+  "purpose": "Fix the rejected OAuth redirect by registering and using the original Manus-compatible callback scheme"
 }

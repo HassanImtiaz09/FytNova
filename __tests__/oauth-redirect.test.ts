@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   platform: { OS: "android" },
-  config: { scheme: "fytnova" as string | string[] | undefined },
+  config: { scheme: ["fytnova", "manus20260312102054"] as string | string[] | undefined },
   createURL: vi.fn((_path: string, options: { scheme: string }) =>
     `${options.scheme}://oauth/callback`),
 }));
@@ -16,25 +16,37 @@ afterEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
   mocks.platform.OS = "android";
-  mocks.config.scheme = "fytnova";
+  mocks.config.scheme = ["fytnova", "manus20260312102054"];
 });
 
 describe("OAuth redirect for installed previews", () => {
-  it("returns to the scheme registered by the installed app", async () => {
-    // A config change must not leave OAuth pointing at an old Manus scheme.
-    mocks.config.scheme = "another-fytnova-build";
+  it("uses a registered Manus callback even when the branded scheme is first", async () => {
     const { getRedirectUri } = await import("../constants/oauth");
-    expect(getRedirectUri()).toBe("another-fytnova-build://oauth/callback");
+    expect(getRedirectUri()).toBe("manus20260312102054://oauth/callback");
   });
 
-  it("supports Expo configurations with multiple schemes", async () => {
+  it("supports an Expo configuration with a single Manus scheme", async () => {
+    mocks.config.scheme = "manus20260312102054";
+    const { getRedirectUri } = await import("../constants/oauth");
+    expect(getRedirectUri()).toBe("manus20260312102054://oauth/callback");
+  });
+
+  it("does not send an unregistered or rejected scheme to Manus", async () => {
     mocks.config.scheme = ["fytnova", "exp+peakpulse-mobile"];
     const { getRedirectUri } = await import("../constants/oauth");
-    expect(getRedirectUri()).toBe("fytnova://oauth/callback");
+    expect(() => getRedirectUri()).toThrow("Please update FytNova before signing in.");
+    expect(mocks.createURL).not.toHaveBeenCalled();
+  });
+
+  it("does not invent an unregistered callback when Expo config is missing", async () => {
+    mocks.config.scheme = undefined;
+    const { getRedirectUri } = await import("../constants/oauth");
+    expect(() => getRedirectUri()).toThrow("Please update FytNova before signing in.");
   });
 
   it("keeps the hosted web callback on the configured backend", async () => {
     mocks.platform.OS = "web";
+    mocks.config.scheme = "fytnova";
     vi.stubEnv("EXPO_PUBLIC_API_BASE_URL", "https://api.example.com/");
     const { getRedirectUri } = await import("../constants/oauth");
     expect(getRedirectUri()).toBe("https://api.example.com/api/oauth/callback");
@@ -48,7 +60,9 @@ describe("OAuth redirect for installed previews", () => {
     const url = new URL(getLoginUrl());
     expect(url.origin).toBe("https://manus.im");
     expect(url.searchParams.get("appId")).toBe("preview-project");
-    expect(url.searchParams.get("redirectUri")).toBe("fytnova://oauth/callback");
-    expect(atob(url.searchParams.get("state")!)).toBe("fytnova://oauth/callback");
+    const redirectUri = url.searchParams.get("redirectUri")!;
+    expect(redirectUri).toBe("manus20260312102054://oauth/callback");
+    expect(new URL(redirectUri).protocol).toMatch(/^manus/);
+    expect(atob(url.searchParams.get("state")!)).toBe(redirectUri);
   });
 });

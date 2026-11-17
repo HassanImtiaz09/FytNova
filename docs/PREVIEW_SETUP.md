@@ -37,6 +37,13 @@ unauthenticated user endpoint returns no user. These checks establish
 connectivity, not successful sign-in, AI provider access or database writes.
 Native modules still need validation on a physical Android device.
 
+Manus rejects native OAuth callbacks with the branded `fytnova` scheme: its
+authorization service permits only `http`, `https` or `manus*` schemes. The app
+registers both `fytnova` and its original `manus20260312102054` scheme, and sign-in
+selects the registered Manus scheme for both `redirectUri` and the encoded
+state used during token exchange. This registration change requires a new APK;
+restarting the old APK cannot fix the rejected callback.
+
 For the first connected-device check, open **Profile → Sign In to Sync Your
 Data → Continue with Google**. Confirm that the browser returns to FytNova.
 If an **Import Your Data?** prompt appears, choose **Start Fresh** for now;

@@ -21,10 +21,10 @@ const bundleId =
       return /^[a-zA-Z]/.test(segment) ? segment : "x" + segment;
     })
     .join(".") || "space.manus.app";
-// Deep link scheme
-
-const schemeFromBundleId = "fytnova";
-
+// Manus OAuth only accepts http, https or manus* callback schemes. Register
+// the project's original Manus scheme alongside the branded app links.
+const appScheme = "fytnova";
+const oauthScheme = "manus20260312102054";
 
 const env = {
   // App branding - update these values directly (do not use env vars)
@@ -32,7 +32,7 @@ const env = {
   appSlug: "peakpulse-mobile",
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663430072618/TCxddYfhYS3he4wae2YPUE/fytnova-logo-3-KVA7CDeCPkvHBPhUSFyQzi.png",
-  scheme: schemeFromBundleId,
+  scheme: [appScheme, oauthScheme],
   iosBundleId: bundleId,
   androidPackage: bundleId,
 };
@@ -99,13 +99,7 @@ const config: ExpoConfig = {
     intentFilters: [
       {
         action: "VIEW",
-        autoVerify: true,
-        data: [
-          {
-            scheme: env.scheme,
-            host: "*",
-          },
-        ],
+        data: env.scheme.map((scheme) => ({ scheme })),
         category: ["BROWSABLE", "DEFAULT"],
       },
     ],

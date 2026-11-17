@@ -2,10 +2,13 @@ import * as Linking from "expo-linking";
 import Constants from "expo-constants";
 import * as ReactNative from "react-native";
 
-// Use the scheme registered in the installed app, including EAS builds.
+// Use a registered callback that Manus accepts. The branded fytnova scheme
+// remains available for app links, but Manus rejects it for OAuth redirects.
 const configuredScheme = Constants.expoConfig?.scheme;
-const deepLinkScheme =
-  (Array.isArray(configuredScheme) ? configuredScheme[0] : configuredScheme) || "fytnova";
+const configuredSchemes = Array.isArray(configuredScheme)
+  ? configuredScheme
+  : configuredScheme ? [configuredScheme] : [];
+const deepLinkScheme = configuredSchemes.find((scheme) => scheme.startsWith("manus"));
 
 const env = {
   portal: process.env.EXPO_PUBLIC_OAUTH_PORTAL_URL ?? "",
@@ -76,6 +79,9 @@ export const getRedirectUri = () => {
   if (ReactNative.Platform.OS === "web") {
     return `${getApiBaseUrl()}/api/oauth/callback`;
   } else {
+    if (!env.deepLinkScheme) {
+      throw new Error("Please update FytNova before signing in.");
+    }
     return Linking.createURL("/oauth/callback", {
       scheme: env.deepLinkScheme,
     });
