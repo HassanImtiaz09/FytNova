@@ -1,5 +1,6 @@
 {
-  "attempt": 12,
-  "mode": "build",
-  "purpose": "Fix the rejected OAuth redirect by registering and using the original Manus-compatible callback scheme"
+  "attempt": 13,
+  "mode": "inspect",
+  "purpose": "Inspect the existing Manus-compatible OAuth APK build without starting another build",
+  "buildId": "dbbce5b7-f235-4a75-96cb-09388ede3de2"
 }
