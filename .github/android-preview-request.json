@@ -1,6 +1,6 @@
 {
-  "attempt": 17,
+  "attempt": 18,
   "mode": "inspect",
-  "purpose": "Read the existing OAuth fix build status after the Expo queue wait",
+  "purpose": "Inspect native compilation progress of the existing Manus OAuth callback build",
   "buildId": "dbbce5b7-f235-4a75-96cb-09388ede3de2"
 }
