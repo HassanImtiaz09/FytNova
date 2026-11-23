@@ -14,8 +14,8 @@ describe("session-cookie scope", () => {
     const options = getSessionCookieOptions(request(hostname));
     expect(options.domain).toBeUndefined();
     const append = vi.fn();
-    const response = { req: {}, append } as unknown as Response;
-    express.response.cookie.call(response, "test_session", "test-token", options);
+    const response = { req: {}, append, cookie: express.response.cookie } as unknown as Response;
+    response.cookie("test_session", "test-token", options);
     const header = append.mock.calls[0][1] as string;
     expect(header).not.toMatch(/domain=/i);
     expect(header).toContain("HttpOnly");
