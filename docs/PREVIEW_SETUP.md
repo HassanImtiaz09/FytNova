@@ -24,24 +24,32 @@ remain in Expo. The workflow never submits to an app store.
 The `android-preview` profile builds a release-mode APK using the generated
 Android template's debug signing key. It is for internal UI testing only; store
 releases need their own signing configuration. This APK opens without Metro.
-The `android-preview` profile now includes the public API and OAuth settings
-from the existing Manus preview. Its API is a development sandbox, not a
-permanent deployment: keep that Manus sandbox running while testing. If it
-stops or its address changes, online features will be unavailable. Replace
-`EXPO_PUBLIC_API_BASE_URL` in that profile with a stable deployment URL and
-rebuild when one is available. Backend credentials remain on the backend;
-only public connection settings are embedded in the APK.
+The `android-preview` profile now points to the persistent Railway API at
+`https://fytnova-api-production.up.railway.app`. The user selected a fresh
+database for testing, so existing Manus server records are not copied. Google
+sign-in still uses the existing hosted Manus OAuth service and its registered
+native callback; the API no longer needs an awake Manus sandbox.
 
-If an installed preview shows HTML headed `Manus Sandbox` under
+Native credentials are bound to the configured API address. The first upgrade
+retires an untagged legacy session or a session from a different backend and
+requires a fresh sign-in. Local guest data is not deleted. Later builds with
+the same API address retain their sessions. Server credentials remain private
+on Railway; only public connection settings are embedded in the APK.
+
+AI, storage, voice and payment providers still require their own private
+configuration and acceptance checks. See [Railway setup](RAILWAY_DEPLOYMENT.md).
+
+If an older Manus-backed preview shows HTML headed `Manus Sandbox` under
 `Authentication failed`, the sandbox proxy is responding instead of the API.
 Reopen the project in Manus and start the backend on port 3000. Confirm that
 `/api/health` returns JSON with `ok: true`, then start a fresh sign-in from the
 app; the earlier authorization code may have expired. New builds show readable
 API errors and offer **Back to sign in** instead of displaying the HTML body.
 
-The sandbox's REST and tRPC health endpoints respond successfully, and its
-unauthenticated user endpoint returns no user. These checks establish
-connectivity, not successful sign-in, AI provider access or database writes.
+The Railway API's REST/tRPC health and database-readiness endpoints return
+successful JSON responses. Unauthenticated identity reads return no user, and
+protected account-data routes return 401. These checks establish connectivity
+and schema readiness; phone sign-in and data writes still need device checks.
 Native modules still need validation on a physical Android device.
 
 Manus rejects native OAuth callbacks with the branded `fytnova` scheme: its

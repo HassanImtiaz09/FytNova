@@ -1,6 +1,5 @@
 {
-  "attempt": 19,
-  "mode": "inspect",
-  "purpose": "Read native progress of the existing corrected OAuth APK",
-  "buildId": "dbbce5b7-f235-4a75-96cb-09388ede3de2"
+  "attempt": 20,
+  "mode": "build",
+  "purpose": "Connect the Android test APK to the live Railway API and fresh test database, retiring previous-backend sign-in sessions"
 }

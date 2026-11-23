@@ -1,6 +1,32 @@
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
-import { SESSION_TOKEN_KEY, USER_INFO_KEY } from "@/constants/oauth";
+import { getApiBaseUrl, SESSION_TOKEN_KEY, USER_INFO_KEY } from "@/constants/oauth";
+
+const SESSION_BACKEND_KEY = "app_session_backend";
+let sessionBackendCheck: Promise<void> | null = null;
+
+function ensureNativeSessionBackend(): Promise<void> {
+  // API addresses are embedded in each native build. Bind stored credentials
+  // to that address, and retire legacy sessions once when upgrading to Railway.
+  // Share the check so concurrent auth hooks cannot clear a newly saved login.
+  if (!sessionBackendCheck) {
+    sessionBackendCheck = (async () => {
+      const backend = getApiBaseUrl();
+      if (!backend) throw new Error("FytNova's server address is not configured.");
+      const previous = await SecureStore.getItemAsync(SESSION_BACKEND_KEY);
+      if (previous === backend) return;
+      await Promise.all([
+        SecureStore.deleteItemAsync(SESSION_TOKEN_KEY),
+        SecureStore.deleteItemAsync(USER_INFO_KEY),
+      ]);
+      await SecureStore.setItemAsync(SESSION_BACKEND_KEY, backend);
+    })().catch((error) => {
+      sessionBackendCheck = null;
+      throw error;
+    });
+  }
+  return sessionBackendCheck;
+}
 
 export type User = {
   id: number;
@@ -20,11 +46,12 @@ export async function getSessionToken(): Promise<string | null> {
     }
 
     // Use SecureStore for native
+    await ensureNativeSessionBackend();
     console.log("[Auth] Getting session token...");
     const token = await SecureStore.getItemAsync(SESSION_TOKEN_KEY);
     console.log(
       "[Auth] Session token retrieved from SecureStore:",
-      token ? `present (${token.substring(0, 20)}...)` : "missing",
+      token ? "present" : "missing",
     );
     return token;
   } catch (error) {
@@ -42,7 +69,8 @@ export async function setSessionToken(token: string): Promise<void> {
     }
 
     // Use SecureStore for native
-    console.log("[Auth] Setting session token...", token.substring(0, 20) + "...");
+    await ensureNativeSessionBackend();
+    console.log("[Auth] Setting session token...");
     await SecureStore.setItemAsync(SESSION_TOKEN_KEY, token);
     console.log("[Auth] Session token stored in SecureStore successfully");
   } catch (error) {
@@ -78,6 +106,7 @@ export async function getUserInfo(): Promise<User | null> {
       info = window.localStorage.getItem(USER_INFO_KEY);
     } else {
       // Use SecureStore for native
+      await ensureNativeSessionBackend();
       info = await SecureStore.getItemAsync(USER_INFO_KEY);
     }
 
@@ -86,7 +115,7 @@ export async function getUserInfo(): Promise<User | null> {
       return null;
     }
     const user = JSON.parse(info);
-    console.log("[Auth] User info retrieved:", user);
+    console.log("[Auth] User info retrieved");
     return user;
   } catch (error) {
     console.error("[Auth] Failed to get user info:", error);
@@ -96,7 +125,7 @@ export async function getUserInfo(): Promise<User | null> {
 
 export async function setUserInfo(user: User): Promise<void> {
   try {
-    console.log("[Auth] Setting user info...", user);
+    console.log("[Auth] Setting user info...");
 
     if (Platform.OS === "web") {
       // Use localStorage for web
@@ -106,6 +135,7 @@ export async function setUserInfo(user: User): Promise<void> {
     }
 
     // Use SecureStore for native
+    await ensureNativeSessionBackend();
     await SecureStore.setItemAsync(USER_INFO_KEY, JSON.stringify(user));
     console.log("[Auth] User info stored in SecureStore successfully");
   } catch (error) {

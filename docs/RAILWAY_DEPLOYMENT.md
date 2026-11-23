@@ -2,8 +2,9 @@
 
 The repository root contains both the Expo app and Express/tRPC API. Railway
 runs the API. It does not start Metro, compile Android or host the Expo screens.
-The initial Railway service and database are separate from the existing Manus
-backend; switching the APK is a later step after data and provider verification.
+The Railway API is deployed at `https://fytnova-api-production.up.railway.app`.
+The user selected a fresh database for testing. The Android preview profile now
+uses this API; provider-dependent AI and storage features need separate setup.
 
 ## Service configuration
 
@@ -75,9 +76,14 @@ with missing or empty history before calling the migrator. Resolve that case
 from a backup and a reviewed schema/history comparison, not by deleting tables
 or bypassing the check.
 
-The initial Railway database is empty. It does **not** contain the Manus users,
-meal logs, workouts, progress records or subscription rows. Before the app
-switches to Railway:
+The user selected a new empty Railway database for testing rather than a data
+transfer. Existing Manus users, meals, workouts, progress and subscription rows
+remain on the original backend. Native credentials are bound to their API URL;
+the next APK retires legacy/previous-backend sessions and needs a fresh sign-in,
+without deleting local guest records. Existing sessions tagged with the same
+Railway address are retained in future builds.
+
+If a future cutover must preserve existing server records:
 
 1. Back up/export the existing Manus database through a private channel. Keep
    table relationships, IDs, and migration history together.
@@ -88,9 +94,9 @@ switches to Railway:
    writes. Verify existing media URLs and the storage provider separately.
 4. Configure recurring backups before using Railway as the authoritative store.
 
-Keep the current Manus backend and APK endpoint available until the destination
-has been verified. The guest-data import remains incomplete; do not use it as
-a substitute for a database transfer.
+For such a data transfer, keep the source available until the destination is
+verified. The guest-data import remains incomplete; do not use it as a
+substitute for a database transfer.
 
 ## Deployment and app checks
 
@@ -106,9 +112,8 @@ After deployment, generate a public HTTPS domain for the API and check:
 - `/api/oauth/mobile` without parameters returns its 400 JSON validation error.
 - Protected data routes reject unauthenticated requests.
 
-Then verify the data transfer and provider connections. Update
-`EXPO_PUBLIC_API_BASE_URL` in the Android preview EAS profile to the Railway
-HTTPS origin, build a new APK, and test fresh Google sign-in, saved profile,
+For this fresh testing deployment, the EAS profile already contains the Railway
+HTTPS origin. Build a new APK and test fresh Google sign-in, saved profile,
 meals/workouts, AI and media. A successful readiness check establishes API and
 schema availability; it does not establish that these feature flows work.
 
