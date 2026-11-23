@@ -1,4 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HapticTab } from "@/components/haptic-tab";
 import { Platform, View, StyleSheet } from "react-native";
@@ -48,15 +49,16 @@ function TabBarBackground() {
 
 function useAuthGuard() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { isGuest, loading: guestLoading } = useGuestAuth();
 
   useEffect(() => {
-    if (authLoading || guestLoading) return;
+    if (!isFocused || authLoading || guestLoading) return;
     if (!isAuthenticated && !isGuest) {
       router.replace("/login" as any);
     }
-  }, [isAuthenticated, isGuest, authLoading, guestLoading, router]);
+  }, [isFocused, isAuthenticated, isGuest, authLoading, guestLoading, router]);
 }
 
 export default function TabLayout() {

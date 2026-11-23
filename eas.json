@@ -4,6 +4,24 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "android-preview": {
+      "distribution": "internal",
+      "developmentClient": false,
+      "withoutCredentials": true,
+      "node": "22.16.0",
+      "pnpm": "9.12.0",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "preview",
+        "EXPO_PUBLIC_API_BASE_URL": "https://fytnova-api-production.up.railway.app",
+        "EXPO_PUBLIC_APP_ID": "TCxddYfhYS3he4wae2YPUE",
+        "EXPO_PUBLIC_OAUTH_PORTAL_URL": "https://manus.im",
+        "EXPO_PUBLIC_OAUTH_SERVER_URL": "https://api.manus.im"
+      }
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",

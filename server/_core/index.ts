@@ -6,6 +6,8 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { parseServerPort, validateProductionConfig } from "./deployment";
+import { databaseIsReady } from "./readiness";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -27,6 +29,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  validateProductionConfig();
   const app = express();
   const server = createServer(app);
 
@@ -76,6 +79,11 @@ async function startServer() {
     res.json({ ok: true, timestamp: Date.now() });
   });
 
+  app.get("/api/ready", async (_req, res) => {
+    const ready = await databaseIsReady();
+    res.status(ready ? 200 : 503).json({ ok: ready });
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -84,16 +92,25 @@ async function startServer() {
     }),
   );
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
+  const preferredPort = parseServerPort(process.env.PORT);
+  // Managed hosts route to their assigned PORT. A fallback port would make
+  // a deployment appear running while every external request fails.
+  const port = process.env.NODE_ENV === "production"
+    ? preferredPort
+    : await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
-    console.log(`[api] server listening on port ${port}`);
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, "0.0.0.0", resolve);
   });
+  console.log(`[api] server listening on port ${port}`);
 }
 
-startServer().catch(console.error);
+startServer().catch((error: Error) => {
+  console.error("[api] Startup failed:", error.message);
+  process.exitCode = 1;
+});

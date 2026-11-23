@@ -15,6 +15,7 @@ import {
   Text, View, TouchableOpacity, ImageBackground, Image, StyleSheet, Platform, ActivityIndicator, RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { useAuth } from "@/hooks/use-auth";
 import { useGuestAuth } from "@/lib/guest-auth";
 import { trpc } from "@/lib/trpc";
@@ -137,6 +138,7 @@ function GoalRing({ value, label, percentage, color }: { value: string; label: s
 
 function HomeScreenContent() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const { canAccess, isTrialActive, daysLeftInTrial, hasUsedTrial, isPaid } = useSubscription();
   const [paywallFeature, setPaywallFeature] = useState<{ name: string; icon: string; tier: "basic" | "pro"; desc?: string } | null>(null);
   const { showTutorial, dismissTutorial } = useTutorial();
@@ -298,22 +300,25 @@ function HomeScreenContent() {
 
   // ââ Onboarding guard âââââ
   useEffect(() => {
-    if (authLoading || guestLoading) return;
+    if (!isFocused || authLoading || guestLoading || !canUse) return;
     if (isAuthenticated) {
       const timer = setTimeout(() => setOnboardingChecked(true), 800);
       return () => clearTimeout(timer);
     }
+    let active = true;
     AsyncStorage.getItem("@onboarding_complete").then(val => {
+      if (!active) return;
       if (!val) router.replace("/onboarding" as any);
       else setOnboardingChecked(true);
     });
-  }, [authLoading, guestLoading, isAuthenticated]);
+    return () => { active = false; };
+  }, [isFocused, authLoading, guestLoading, isAuthenticated, canUse, router]);
 
   useEffect(() => {
-    if (!isAuthenticated || authLoading) return;
+    if (!isFocused || !isAuthenticated || authLoading) return;
     if (profile === null) router.replace("/onboarding" as any);
     else if (profile !== undefined) setOnboardingChecked(true);
-  }, [profile, isAuthenticated, authLoading]);
+  }, [isFocused, profile, isAuthenticated, authLoading, router]);
 
   // ââ Load analytics data âââââ
   useEffect(() => {

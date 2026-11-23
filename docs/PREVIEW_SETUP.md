@@ -1,0 +1,152 @@
+# FytNova preview setup
+
+The app uses Expo SDK 54. Use a browser to review screens, then an Android
+development build to test native modules. The native build still needs validation
+on a physical device; browser success does not establish camera/health support.
+
+## Android APK through GitHub Actions
+
+The **Android preview APK** workflow uses the repository Actions secret
+`EXPO_TOKEN` to create/link the Expo project and build an installable APK with
+embedded JavaScript. The token is only passed to the Expo steps. It is never
+included in the mobile app or published artifacts.
+
+On `codex/preview-setup`, changing `.github/android-preview-request.json` starts
+one build request. Ordinary source commits do not trigger additional builds.
+After the workflow is on the default branch, it can also be started manually
+from the repository's Actions page.
+
+The workflow summary provides the Expo build link and, on success, the APK
+installation link. The `expo-android-build` and `expo-android-result` artifacts
+contain only project/build metadata and the resulting APK URL. Cloud build logs
+remain in Expo. The workflow never submits to an app store.
+
+The `android-preview` profile builds a release-mode APK using the generated
+Android template's debug signing key. It is for internal UI testing only; store
+releases need their own signing configuration. This APK opens without Metro.
+The `android-preview` profile now points to the persistent Railway API at
+`https://fytnova-api-production.up.railway.app`. The user selected a fresh
+database for testing, so existing Manus server records are not copied. Google
+sign-in still uses the existing hosted Manus OAuth service and its registered
+native callback; the API no longer needs an awake Manus sandbox.
+
+Native credentials are bound to the configured API address. The first upgrade
+retires an untagged legacy session or a session from a different backend and
+requires a fresh sign-in. Local guest data is not deleted. Later builds with
+the same API address retain their sessions. Server credentials remain private
+on Railway; only public connection settings are embedded in the APK.
+
+AI, storage, voice and payment providers still require their own private
+configuration and acceptance checks. See [Railway setup](RAILWAY_DEPLOYMENT.md).
+
+If an older Manus-backed preview shows HTML headed `Manus Sandbox` under
+`Authentication failed`, the sandbox proxy is responding instead of the API.
+Reopen the project in Manus and start the backend on port 3000. Confirm that
+`/api/health` returns JSON with `ok: true`, then start a fresh sign-in from the
+app; the earlier authorization code may have expired. New builds show readable
+API errors and offer **Back to sign in** instead of displaying the HTML body.
+
+The Railway API's REST/tRPC health and database-readiness endpoints return
+successful JSON responses. Unauthenticated identity reads return no user, and
+protected account-data routes return 401. These checks establish connectivity
+and schema readiness; phone sign-in and data writes still need device checks.
+Native modules still need validation on a physical Android device.
+
+Manus rejects native OAuth callbacks with the branded `fytnova` scheme: its
+authorization service permits only `http`, `https` or `manus*` schemes. The app
+registers both `fytnova` and its original `manus20260312102054` scheme, and sign-in
+selects the registered Manus scheme for both `redirectUri` and the encoded
+state used during token exchange. This registration change requires a new APK;
+restarting the old APK cannot fix the rejected callback.
+
+For the first connected-device check, open **Profile → Sign In to Sync Your
+Data → Continue with Google**. Confirm that the browser returns to FytNova.
+If an **Import Your Data?** prompt appears, choose **Start Fresh** for now;
+that button dismisses the prompt without deleting local guest records. The
+existing import handler reports success without persisting data, while the
+client then deletes its local copies. Do not use **Import My Data** until
+server persistence and migration verification are implemented.
+
+TrackPlayer 4.1.2 includes a pnpm patch for React Native 0.81's non-null Bundle
+conversion API. The two track getters now resolve null when their original
+Bundle is missing. The patch is applied by the locked pnpm installation; do not
+replace it with manual edits to node_modules.
+
+## Browser preview
+
+Use Node 22 LTS and the package manager declared in package.json (pnpm 9.12.0).
+From this checkout:
+
+```sh
+pnpm install --frozen-lockfile
+cp .env.example .env
+pnpm dev
+```
+
+Open http://localhost:8081/login on the computer running these commands.
+Choose **Skip — Continue as Guest**, then complete onboarding or choose **Skip**.
+The local API runs on port 3000. Browser screens and local guest data can be
+reviewed without AI, payment or auth credentials; those services need their own
+configuration to work. Native camera, health sync and background audio must be
+tested in the Android build.
+
+Current guest-mode browser captures: [Home](previews/home.png),
+[Train](previews/train.png), and [Nutrition](previews/nutrition.png).
+
+## First Android development build
+
+1. Create a free account at https://expo.dev/signup.
+2. Run the following from the checkout and sign in through the CLI. Expo build
+   quotas and pricing depend on the account's current plan.
+
+```sh
+pnpm exec eas login
+pnpm exec eas whoami
+pnpm exec eas init
+```
+
+Choose an existing FytNova project if there is one, or create a new project owned
+by your account. `eas init` links its project ID into the app configuration; do not
+replace a previously linked project with a second one.
+
+3. Set `EXPO_PUBLIC_API_BASE_URL` in `.env` to the API's reachable address. For a
+   local backend, use the computer's LAN IP and port 3000, not localhost (which
+   would refer to the phone). For a hosted backend, use its HTTPS URL.
+4. Build the Android development client:
+
+```sh
+pnpm eas:build:dev:android
+```
+
+5. Open the completed build's installation link/QR code on the Android phone.
+   Install the APK and allow installation from that source when Android asks.
+   This installs **FytNova**, the development client for this project.
+6. Start the API and Metro in separate terminals:
+
+```sh
+pnpm dev:server
+```
+
+```sh
+pnpm dev:client
+```
+
+Keep the phone and computer on the same reachable Wi-Fi network. Open FytNova
+and scan the Metro QR code. If Metro requires a tunnel, use
+`pnpm dev:client --tunnel`; this exposes Metro only. The backend must still be
+reachable separately at `EXPO_PUBLIC_API_BASE_URL`.
+
+Screen/JavaScript changes normally refresh through Metro. Changes to native
+dependencies, permissions or config plugins require another APK build. A later
+`preview` EAS build embeds its JS and can run without Metro; it still needs a
+reachable backend for online functionality.
+
+## Current validation boundary
+
+This setup repair removes invalid VisionCamera 5/TrackPlayer 4 Expo plugin entries,
+adds the development client and required dependencies, and aligns Expo packages
+with SDK 54. The first APK compiled successfully and opens to Home on the user's
+Android device. This does not establish that pose detection or native health
+features are complete. Connected sign-in, AI, camera, video, audio and health
+permission flows still need physical-device checks. No database migration is
+needed for this preview setup.
