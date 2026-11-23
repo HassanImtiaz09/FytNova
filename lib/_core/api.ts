@@ -2,10 +2,28 @@ import { Platform } from "react-native";
 import { getApiBaseUrl } from "@/constants/oauth";
 import * as Auth from "./auth";
 
-type ApiResponse<T> = {
-  data?: T;
-  error?: string;
-};
+const SERVER_UNAVAILABLE = "FytNova's server is temporarily unavailable. Please try again shortly.";
+const UNEXPECTED_RESPONSE = "FytNova's server returned an unexpected response. Please try again.";
+
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+function responseErrorMessage(data: unknown, status: number): string {
+  if ([502, 503, 504].includes(status)) return SERVER_UNAVAILABLE;
+  if (data && typeof data === "object") {
+    const body = data as Record<string, unknown>;
+    const message = typeof body.error === "string" ? body.error : body.message;
+    if (typeof message === "string" && message.trim() && message.length <= 300 &&
+      !/<[!\/a-z]/i.test(message)) {
+      return message;
+    }
+  }
+  return status >= 500 ? SERVER_UNAVAILABLE : UNEXPECTED_RESPONSE;
+}
 
 export async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
@@ -20,7 +38,7 @@ export async function apiCall<T>(endpoint: string, options: RequestInit = {}): P
   if (Platform.OS !== "web") {
     const sessionToken = await Auth.getSessionToken();
     console.log("[API] apiCall:", {
-      endpoint,
+      endpoint: endpoint.split("?")[0],
       hasToken: !!sessionToken,
       method: options.method || "GET",
     });
@@ -29,7 +47,7 @@ export async function apiCall<T>(endpoint: string, options: RequestInit = {}): P
       console.log("[API] Authorization header added");
     }
   } else {
-    console.log("[API] apiCall:", { endpoint, platform: "web", method: options.method || "GET" });
+    console.log("[API] apiCall:", { endpoint: endpoint.split("?")[0], platform: "web", method: options.method || "GET" });
   }
 
   const baseUrl = getApiBaseUrl();
@@ -37,7 +55,6 @@ export async function apiCall<T>(endpoint: string, options: RequestInit = {}): P
   const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   const url = baseUrl ? `${cleanBaseUrl}${cleanEndpoint}` : endpoint;
-  console.log("[API] Full URL:", url);
 
   try {
     console.log("[API] Making request...");
@@ -48,44 +65,23 @@ export async function apiCall<T>(endpoint: string, options: RequestInit = {}): P
     });
 
     console.log("[API] Response status:", response.status, response.statusText);
-    const responseHeaders = Object.fromEntries(response.headers.entries());
-    console.log("[API] Response headers:", responseHeaders);
-
-    // Check if Set-Cookie header is present (cookies are automatically handled in React Native)
-    const setCookie = response.headers.get("Set-Cookie");
-    if (setCookie) {
-      console.log("[API] Set-Cookie header received:", setCookie);
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[API] Error response:", errorText);
-      let errorMessage = errorText;
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.error || errorJson.message || errorText;
-      } catch {
-        // Not JSON, use text as is
-      }
-      throw new Error(errorMessage || `API call failed: ${response.statusText}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      const data = await response.json();
-      console.log("[API] JSON response received");
-      return data as T;
-    }
-
+    // Proxies can return an HTML error page instead of the API's JSON. Never
+    // propagate that body to the sign-in screen or logs, even for HTTP 200.
     const text = await response.text();
-    console.log("[API] Text response received");
-    return (text ? JSON.parse(text) : {}) as T;
-  } catch (error) {
-    console.error("[API] Request failed:", error);
-    if (error instanceof Error) {
-      throw error;
+    if (response.ok && !text.trim()) return {} as T;
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new ApiError(responseErrorMessage(null, response.status), response.status);
     }
-    throw new Error("Unknown error occurred");
+    if (!response.ok) {
+      throw new ApiError(responseErrorMessage(data, response.status), response.status);
+    }
+    return data as T;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError("Could not connect to FytNova's server. Check your connection and try again.", 0);
   }
 }
 
@@ -99,7 +95,6 @@ export async function exchangeOAuthCode(
   // Use GET with query params
   const params = new URLSearchParams({ code, state });
   const endpoint = `/api/oauth/mobile?${params.toString()}`;
-  console.log("[API] Calling OAuth mobile endpoint:", endpoint);
   const result = await apiCall<{ app_session_id: string; user: any }>(endpoint);
 
   // Convert app_session_id to sessionToken for compatibility
@@ -107,7 +102,6 @@ export async function exchangeOAuthCode(
   console.log("[API] OAuth exchange result:", {
     hasSessionToken: !!sessionToken,
     hasUser: !!result.user,
-    sessionToken: sessionToken ? `${sessionToken.substring(0, 50)}...` : null,
   });
 
   return {

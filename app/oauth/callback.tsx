@@ -4,9 +4,8 @@ import * as Auth from "@/lib/_core/auth";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text } from "react-native";
+import { ActivityIndicator, Pressable, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { hasGuestDataToMigrate } from "@/lib/guest-data-migration";
 import { GuestMigrationModal } from "@/components/guest-migration-modal";
 import { trpc } from "@/lib/trpc";
@@ -272,6 +271,14 @@ export default function OAuthCallback() {
             <Text className="text-base leading-6 text-center text-foreground">
               {errorMessage}
             </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back to sign in"
+              className="mt-4 min-h-12 justify-center rounded-xl border border-border px-6 py-3"
+              onPress={() => router.replace("/login")}
+            >
+              <Text className="text-center text-base text-foreground">Back to sign in</Text>
+            </Pressable>
           </>
         )}
       </ThemedView>

@@ -32,6 +32,13 @@ stops or its address changes, online features will be unavailable. Replace
 rebuild when one is available. Backend credentials remain on the backend;
 only public connection settings are embedded in the APK.
 
+If an installed preview shows HTML headed `Manus Sandbox` under
+`Authentication failed`, the sandbox proxy is responding instead of the API.
+Reopen the project in Manus and start the backend on port 3000. Confirm that
+`/api/health` returns JSON with `ok: true`, then start a fresh sign-in from the
+app; the earlier authorization code may have expired. New builds show readable
+API errors and offer **Back to sign in** instead of displaying the HTML body.
+
 The sandbox's REST and tRPC health endpoints respond successfully, and its
 unauthenticated user endpoint returns no user. These checks establish
 connectivity, not successful sign-in, AI provider access or database writes.
