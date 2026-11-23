@@ -9,13 +9,14 @@
     "dev:metro": "cross-env EXPO_USE_METRO_WORKSPACE_ROOT=1 NODE_OPTIONS=--max-old-space-size=1536 npx expo start --web --port ${EXPO_PORT:-8081}",
     "web": "expo start --web --port 8081",
     "dev:client": "expo start --dev-client",
-    "build": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "esbuild index=server/_core/index.ts migrate=server/migrate.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "lint": "expo lint",
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "db:migrate": "node dist/migrate.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "qr": "node scripts/generate_qr.mjs",
@@ -135,6 +136,9 @@
     "vitest": "^2.1.9"
   },
   "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": "22.x"
+  },
   "pnpm": {
     "patchedDependencies": {
       "react-native-track-player@4.1.2": "patches/react-native-track-player@4.1.2.patch"
