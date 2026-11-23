@@ -51,6 +51,10 @@ Google sign-in continues using Manus's hosted OAuth service and the registered
 `manus20260312102054` app callback. Running this API on Railway removes its
 dependency on an awake Manus sandbox; it does not replace the OAuth provider.
 
+Session cookies are HTTP-only and host-only. The API does not set a parent
+Domain such as `.railway.app`; browser clients send the cookie back to the API
+with credentials included, and native clients use their stored bearer token.
+
 AI coaching needs `ANTHROPIC_API_KEY` and/or the configured Gemini/Forge provider.
 The existing storage helpers require `BUILT_IN_FORGE_API_URL` and
 `BUILT_IN_FORGE_API_KEY`; validate their use from Railway before enabling
